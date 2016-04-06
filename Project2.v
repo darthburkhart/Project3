@@ -1,11 +1,6 @@
 //`timescale 10ns/1ns
 //DIRECTIVES
 `define WORD [15:0]
-`define OP [15:12]
-`define REG1 [11:6]
-`define REG2 [5:0]
-`define REGZERO = 6'b0
-`define REGONE  = 6'b1
 
 `define JZ   4'h0
 `define ADD  4'h1
@@ -25,34 +20,6 @@
 `define INVF 4'hE
 `define MULF 4'hF
 
-
-//STATES
-`define START 6'd0
-`define ALUSTART 6'd1
-`define ALUOP 6'd2
-`define ALUEND 6'd3
-`define INSTASK 6'd4
-`define INSTWAIT 6'd5
-`define MFC 6'd6
-`define PCINC 6'd8
-`define INSTRST 6'd9
-`define INSTST 6'd10
-`define DECODE 6'd11
-`define LOADIMM 6'd12
-`define STOREFROMMEM 6'd13
-`define LDMFC 6'd14
-`define DATAOUT 6'd15
-`define LOADREG 6'd16
-`define MDRST 6'd17
-`define JUMPSTART 6'd18
-`define ADD0 6'd19
-`define PCLD 6'd20
-`define WRITEMEM 6'd23
-`define ISZERO 6'd24
-`define HALT 6'd25
-`define STEND 6'd26
-
-`define CLEAR 1'b0;
 //END DIRECTIVES
 
 module ALU(opr1,opr2,out1,op,cc);
@@ -84,7 +51,7 @@ module ALU(opr1,opr2,out1,op,cc);
 				out1 <= opr1 | opr2;
 			end	
 			`SHR: begin
-				out1 <= opr1 >> opr2;
+				out1 <= opr1 >> 1;
 				out1[15] <= opr1[15];
 			end
 			`XOR: begin
@@ -116,7 +83,7 @@ module processor(clk,halt);
 	input clk;
 	output reg halt;
 	reg `WORD pc;
-	reg `WORD ram[0:100];
+	reg `WORD ram[0:65535];
 	reg `WORD instruction;
 	reg `WORD stage1[0:5];
 	reg `WORD stage2[0:5];
@@ -124,12 +91,14 @@ module processor(clk,halt);
 	reg `WORD op1;
 	reg `WORD op2;
 	reg `WORD newPC;
+	reg stop1;
+	reg stop2;
 	reg pcFlag;
 	reg [3:0] operation;
 	
 	reg regFileIn,regFileOut;
 	reg `WORD registers[0:63];
-	
+	reg holdUp;
 	wire `WORD toStage3;
 	wire `WORD cc;
 	reg `WORD i;
@@ -137,8 +106,9 @@ module processor(clk,halt);
 	ALU alu(op2,op1,toStage3,operation,cc);
 		
 	initial begin
-		$readmemh("test6.ram",ram);
+		$readmemh("test8.ram",ram);
 		halt<=0;
+		holdUp<=0;
 		//register file initialization
 		$readmemh("registers.ram",registers);
 		pc <= 16'b0;
@@ -146,6 +116,8 @@ module processor(clk,halt);
 		squashNext2<=0;
 		pcFlag<=0;
 		newPC<=16'b0;
+		stop1<=0;
+		stop2<=0;
 	end
 	
 	
@@ -156,6 +128,7 @@ module processor(clk,halt);
 	//stage 1 instruction fetch
 	always@(posedge clk)
 	begin
+
 		if (pcFlag == 1 ) begin
 			pc<=newPC;
 			pcFlag <=0;
@@ -165,6 +138,8 @@ module processor(clk,halt);
 	
 	always@(negedge clk)
 	begin
+		if (holdUp == 0)begin
+		stop1<=0;
 		case (ram[pc][15:12])
 			`LI: 
 			begin
@@ -184,25 +159,39 @@ module processor(clk,halt);
 		stage1[2]<=ram[pc][5:0];
 		stage1[3]<=ram[pc][11:6];
 		stage1[5]<=ram[pc];
-		//#2 $display("Stage 1: %h %h %h %h %h %h",stage1[0],stage1[1],stage1[2],stage1[3],stage1[4],stage1[5]);//$display("Stage1: %h  %h",pc,ram[pc]);
+		end else begin
+			stop1<=1;
+		end
+		//#2 $display("Stage 1: %h",stage1[5]);//$display("Stage1: %h  %h",pc,ram[pc]);
 	end
 	
 	
 	//stage 2 register file games
 	always@(posedge clk)
 	begin
-		
+
 	end
 	
 	always@(negedge clk)
 	begin
-		stage2[0]<=stage1[0];
-		stage2[1]<=registers[stage1[1]];
-		stage2[2]<=registers[stage1[2]];
-		stage2[3]<=stage1[3];
-		stage2[4]<=stage1[4];
-		stage2[5]<=stage1[5];
-		//#4 $display("Stage 2: %h %h %h %h %h %h",stage2[0],stage2[1],stage2[2],stage2[3],stage2[4],stage2[5]);
+		if (holdUp==0) begin
+			stop2<=0;
+			stage2[0]<=stage1[0];
+			stage2[1]<=registers[stage1[1]];
+			stage2[2]<=registers[stage1[2]];
+			stage2[3]<=stage1[3];
+			stage2[4]<=stage1[4];
+			stage2[5]<=stage1[5];
+		end else begin
+			stop2<=1;
+			stage2[0] <= 16'bz;
+			stage2[1] <= 16'bz;
+			stage2[2] <= 16'bz;
+			stage2[3] <= 16'bz;
+			stage2[4] <= 16'bz;
+			stage2[5] <= 16'bz;
+		end		
+		//#4 $display("Stage 2: %h",stage2[5]);
 	end
 	
 	
@@ -215,7 +204,7 @@ module processor(clk,halt);
 	end
 	
 	always@(negedge clk)
-	begin
+	begin 
 		if(operation == `ST) begin
 			ram[op2]<=op1;
 			stage3[5] <= stage2[5];
@@ -235,7 +224,11 @@ module processor(clk,halt);
 				`JZ: begin
 					if (stage2[1] == 0) begin
 						if (stage2[5][5:0]==6'b0 && stage2[5][11:6]!=6'b0) begin
+							if(holdUp==1) begin
+							squashNext1<=1;
+							end else begin
 							squashNext2<=1;
+							end
 						end else if (stage2[5][5:0]>6'b0)begin
 							newPC<=stage2[2];
 							squashNext2<=1;
@@ -246,7 +239,8 @@ module processor(clk,halt);
 				end
 			endcase
 		end
-		//#6 $display("Stage 3: %h %h %h %h %h %h\n",stage3[0],stage3[1],stage3[2],stage3[3],stage3[4],stage3[5]);
+	
+		//#6 $display("Stage 3: %h\n",stage3[5]);
 	end
 	
 	always@(squashNext2) begin
@@ -277,7 +271,12 @@ module processor(clk,halt);
 	//Stage 4 Write back?
 	always@(posedge clk)
 	begin
-	
+		if(stage1[5][11:6]==stage2[5][11:6] || stage1[5][11:6]==stage3[5][11:6] || stage1[5][5:0]==stage2[5][11:6] || stage1[5][5:0]==stage3[5][11:6])
+		begin
+			holdUp<=1;
+		end else begin
+			holdUp<=0;
+		end
 	end
 	
 	always@(negedge clk)
@@ -294,11 +293,8 @@ module processor(clk,halt);
 				
 			end
 			`ST: begin
-			
+
 			end
-			//`LD: begin
-			
-			//end
 			default: registers[stage3[0][5:0]]<=stage3[1];
 		endcase
 		end
@@ -309,9 +305,11 @@ module processor(clk,halt);
 	begin
 		if (halt == 1'b1)
 		begin
-		$display("Program Counter: %h",pc);
-		$display("First 12 registers: \n0: %h\n1: %h\n2: %h\n3: %h\n4: %h\n5: %h\n6: %h\n7: %h\n8: %h\n9: %h\n10: %h\n11: %h",registers[0],registers[1],registers[2],registers[3],registers[4],registers[5],registers[6],registers[7],registers[8],registers[9],registers[10],registers[11]);
-		$display("RAM Data: \n%h\n%h\n%h\n%h",ram[50],ram[51],ram[52],ram[53]);
+					$display("yes");
+
+		//$display("Program Counter: %h",pc);
+		//$display("First 15 registers: \n0: %h\n1: %h\n2: %h\n3: %h\n4: %h\n5: %h\n6: %h\n7: %h\n8: %h\n9: %h\n10: %h\n11: %h\n12: %h\n13: %h\n14: %h\n15: %h",registers[8],registers[9],registers[10],registers[11],registers[12],registers[13],registers[14],registers[15],registers[16],registers[17],registers[18],registers[19],registers[20],registers[21],registers[22],registers[23]);
+		//$display("RAM Data: \n%h\n%h\n%h\n%h",ram[50],ram[51],ram[52],ram[53]);
 		end
 	end
 
@@ -327,7 +325,7 @@ module testBench;
 	begin
 		//$dumpfile;
 		//$dumpvars(0,testBench);
-		$display("Here 0");
+		//$display("Here 0");
 		#100 //Wait until ALL memory is initialized
 		clk <= 0;
 		while (clear != 1)
@@ -336,7 +334,7 @@ module testBench;
 			#100;
 			clk<=~clk;		
 		end
-		$finish;
+		//$finish;
 	end
 	
 	
