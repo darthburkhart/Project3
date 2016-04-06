@@ -90,6 +90,9 @@ module ALU(opr1,opr2,out1,op,cc);
 			`XOR: begin
 				out1 <= opr1 ^ opr2;
 			end
+			`DUP: begin
+				out1<= opr1;
+			end
 		endcase
 	end
 	
@@ -131,7 +134,7 @@ module processor(clk,halt);
 	ALU alu(op2,op1,toStage3,operation,cc);
 		
 	initial begin
-		$readmemh("test1.ram",ram);
+		$readmemh("test2.ram",ram);
 		halt<=0;
 		//register file initialization
 		$readmemh("registers.ram",registers);
@@ -243,51 +246,23 @@ module processor(clk,halt);
 endmodule
 
 module testBench;
-	//wire [0:63] controls;
-	//wire mfc;
-	//wire `WORD conditionCodes;
-	//wire `WORD instruction;
-	//reg `WORD instruction;
 	reg clk;
-	//reg clr;
 	wire clear;
-	//wire `WORD toRam;
-	//wire `WORD bus;
-	//wire `WORD mdrRAM;
-	//wire `WORD RAMmdr;
-	//wire [3:0] data;
-	//wire `WORD i;
-	
-	//wire `WORD zWire;
-	//wire `WORD yWire;
-	//wire [65536*16-1:0] mem;
-	//wire [64*16-1:0] mem1;
-	//reg `WORD memTest [0:100];
-	//output reg `WORD memRam ;//[0:65535];
-	//output reg `WORD regFile ;//[0:63];
-	//assign clear = 0;
-	
+
 	processor proc(clk,clear);
-	
-	
+
 	initial 
 	begin
-	//$readmemh("memOut.txt",memTest);
-//$dumpfile;
-	//$dumpvars(0,testBench);
-	$display("Here 0");
-	#100 //Wait until ALL memory is initialized
-	//clr <= 1'b0;
-	
-		
-        clk <= 0;
-		//$display("Here 1");
+		//$dumpfile;
+		//$dumpvars(0,testBench);
+		$display("Here 0");
+		#100 //Wait until ALL memory is initialized
+		clk <= 0;
 		while (clear != 1)
 		begin
 			//$display("Clock %b",clk);
 			#100;
-			clk<=~clk;
-			
+			clk<=~clk;		
 		end
 		
 	end
