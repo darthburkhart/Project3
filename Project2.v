@@ -162,7 +162,7 @@ module processor(clk,halt);
 		end else begin
 			stop1<=1;
 		end
-		//#2 $display("Stage 1: %h",stage1[5]);//$display("Stage1: %h  %h",pc,ram[pc]);
+		#2 $display("Stage 1: %h",stage1[5]);//$display("Stage1: %h  %h",pc,ram[pc]);
 	end
 	
 	
@@ -191,7 +191,7 @@ module processor(clk,halt);
 			stage2[4] <= 16'bz;
 			stage2[5] <= 16'bz;
 		end		
-		//#4 $display("Stage 2: %h",stage2[5]);
+		#4 $display("Stage 2: %h",stage2[5]);
 	end
 	
 	
@@ -240,7 +240,7 @@ module processor(clk,halt);
 			endcase
 		end
 	
-		//#6 $display("Stage 3: %h\n",stage3[5]);
+		#6 $display("Stage 3: %h\n",stage3[5]);
 	end
 	
 	always@(squashNext2) begin
@@ -305,8 +305,6 @@ module processor(clk,halt);
 	begin
 		if (halt == 1'b1)
 		begin
-					$display("yes");
-
 		//$display("Program Counter: %h",pc);
 		//$display("First 15 registers: \n0: %h\n1: %h\n2: %h\n3: %h\n4: %h\n5: %h\n6: %h\n7: %h\n8: %h\n9: %h\n10: %h\n11: %h\n12: %h\n13: %h\n14: %h\n15: %h",registers[8],registers[9],registers[10],registers[11],registers[12],registers[13],registers[14],registers[15],registers[16],registers[17],registers[18],registers[19],registers[20],registers[21],registers[22],registers[23]);
 		//$display("RAM Data: \n%h\n%h\n%h\n%h",ram[50],ram[51],ram[52],ram[53]);
