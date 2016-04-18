@@ -84,7 +84,7 @@ module processor(clk,halt);
 	output reg halt;
 	reg `WORD pc;
 	reg `WORD ram[0:65535];
-	reg `WORD instruction;
+	//reg `WORD instruction;
 	reg `WORD stage1[0:5];
 	reg `WORD stage2[0:5];
 	reg `WORD stage3[0:5];
@@ -96,12 +96,12 @@ module processor(clk,halt);
 	reg pcFlag;
 	reg [3:0] operation;
 	
-	reg regFileIn,regFileOut;
+	//reg regFileIn,regFileOut;
 	reg `WORD registers[0:63];
 	reg holdUp;
 	wire `WORD toStage3;
 	wire `WORD cc;
-	reg `WORD i;
+	//reg `WORD i;
 	reg squashNext2,squashNext1;
 	ALU alu(op2,op1,toStage3,operation,cc);
 		
@@ -133,7 +133,7 @@ module processor(clk,halt);
 			pc<=newPC;
 			pcFlag <=0;
 		end
-		instruction <= ram[pc];
+		//instruction <= ram[pc];
 	end
 	
 	always@(negedge clk)
@@ -306,7 +306,7 @@ module processor(clk,halt);
 		if (halt == 1'b1)
 		begin
 		//$display("Program Counter: %h",pc);
-		//$display("First 15 registers: \n0: %h\n1: %h\n2: %h\n3: %h\n4: %h\n5: %h\n6: %h\n7: %h\n8: %h\n9: %h\n10: %h\n11: %h\n12: %h\n13: %h\n14: %h\n15: %h",registers[8],registers[9],registers[10],registers[11],registers[12],registers[13],registers[14],registers[15],registers[16],registers[17],registers[18],registers[19],registers[20],registers[21],registers[22],registers[23]);
+		$display("First 15 registers: \n0: %h\n1: %h\n2: %h\n3: %h\n4: %h\n5: %h\n6: %h\n7: %h\n8: %h\n9: %h\n10: %h\n11: %h\n12: %h\n13: %h\n14: %h\n15: %h",registers[8],registers[9],registers[10],registers[11],registers[12],registers[13],registers[14],registers[15],registers[16],registers[17],registers[18],registers[19],registers[20],registers[21],registers[22],registers[23]);
 		//$display("RAM Data: \n%h\n%h\n%h\n%h",ram[50],ram[51],ram[52],ram[53]);
 		end
 	end

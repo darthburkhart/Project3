@@ -108,15 +108,13 @@ The diagram for the created processor can be found above in Figure \ref{fig:proc
 \begin{figure}
   \caption{Processor Diagram}
   \centering
-    \includegraphics[width = 9cm, height=15cm,keepaspectratio]{myproc.png}
+    \includegraphics[width = 9cm, height=15cm,keepaspectratio]{proc.jpg}
   \label{fig:procDiagram}
 \end{figure}
 
 %\includegraphics{myproc.png} 
-The state machine which controls the processor consists of 23 states which are responsible for directing the execution of all instructions.
-For one word instructions (all but LI), the controller loads the instruction into the instruction register and then executes the instruction.
-If the instruction is two words long, the state machine recognizes the two-word instruction op-code from the first instruction fetch and loads the second word into the MDR. 
-Since the only two word instruction is LI, there will be no conflicting states between two word instructions.
+The state machine from the multi-cycle design was removed in favor of a more behavioral description of each piece of hardware.
+This was done to reduce the total size of the code and because it was easier than coding a state machine.
 In order to fit 18 instructions into a bit field of size 4, the instructions JZ, SZ, and SYS were consolidated to a single path in the state diagram.
 This was done because these three instructions perform a similar function (not to mention the assignment specified combining these specific instructions).
 
@@ -127,52 +125,19 @@ The first design hurdle was to eliminate the sz instruction in order to keep the
 
 Another obstacle was how to handle the instructions which may not necessarily use the +1 incrementation of the program counter.  The jz instruction for example needs to jump to a specified address if the register contains a zero value.  In order to tackle this issue, we decided to go ahead and load the next instruction into the pipeline, but simply "squash", or in other words just nullify this operation, if the jump was needed.
 
-The li instruction required some tricky programming as well. The words were grabbed on the same clock cycle. This op code would then trigger another memory read to occur. This was done to simplify how each stage would esecute for a given instruction. All instructions would now be ready for execution in the one clock cycle. This also helped simplify the previously mentioned jump and squash instructions.
+The li instruction required some tricky programming as well. The words were grabbed on the same clock cycle. This op code would then trigger another memory read to occur. This was done to simplify how each stage would execute for a given instruction. All instructions would now be ready for execution in the one clock cycle. This also helped simplify the previously mentioned jump and squash instructions.
 
 The ALU used in this project was the exact one used by Alex Burkhart in the previous project. This was done because it reduced the workload for the team. This ALU had very simple inputs and outputs and could be ported over for this project with relative ease. 
 
 For the stages, there were a couple very specific choices made by the team. Each stage was given the same size memory. This was done to make both designing and testing simpler in the future. Dependencies were handled by using simple flags. These flags would cause the affected stage to halt where it was. 
 
-
-Another major decision was to not use a separate control line for each control signal.
-As the number of control signals increased, it became less and less feasible to have named wires going to and from each module.
-Instead, one control line of width 64 was implemented.
-The control line's control signals are as follows:
-
-\begin{itemize}
-\item controls[0] = irin;
-\item controls[1] = irout;
-\item controls[2] = pcin;
-\item controls[3] = pcout;
-\item controls[4] = mdrin;
-\item controls[5] = mdrout;
-\item controls[6] = marin;
-\item controls[7] = marout;
-\item controls[8] = yin;
-\item controls[9] = yout;
-\item controls[10] = zin;
-\item controls[11] = zout;
-\item controls[12] = regin;
-\item controls[13] = regout;
-\item controls[14:19] = selreg;
-\item controls[20] = memread;
-\item controls[21] = memwrite;
-\item controls[22] = outputenable;
-\item controls[23:26] = aluop;
-\item controls[27] = mfc;
-\item controls[28:63] = X (not used);
-\end{itemize}
-The controls line is of the type [0:63] instead of [63:0].
-This was done for no reason other than to try it.
-
-Each register used will output its current value or HiZ on the rising edge of every clock cycle.
-Also, each register will latch values from the bus on the falling edge of every clock cycle.
-This was implemented using two always blocks for both ends of a clock cycle. 
-The reason for doing this was to limit the already large number of clock cycles this multi-cycle machine will take to execute a program.
+Each pipelined stage would latch values on the falling edge of the clock cycle and make any control decisions on the rising edge of the clock cycle.
+This was implemented using two always blocks for both ends of a clock cycle for each stage. 
+It made the design process easier because it was easier to define processor behavior in terms of the individual stages and clock cycles.
 
 A Von Neumann architecture was selected because it seemed easier to implement.
-The only "difficulty" would be making sure the RAM is partitioned for instruction memory and data memory.
-This "difficulty" is overcome by specifying how the RAM gets set during simulation.
+The only difficulty would be making sure the RAM is partitioned for instruction memory and data memory.
+This difficulty is overcome by specifying how the RAM gets set during simulation.
 AIK will output the RAM file in exactly the way it needs to be for the machine.
 
 
@@ -181,15 +146,11 @@ Everything was tested sequentially. So each instruction was tested as it was des
 
 The test bench developed does several things. 
 It checks the validity of each instruction (whether or not the instruction did what it was supposed to do) and it has a good coverage of testing. 
-Using the coverage analyzer, the test bench developed has 100\% line coverage and 100\% finite state machine coverage. 
-This means that the test bench covers each state and every path to and from each state. 
-It also touches every single line of code, meaning there are no untested, nor unused, lines of code in the project.
+Using the coverage analyzer, the test bench developed has less than 100\% line coverage.
+This is a problem with coverage analysis.
+Independent testing showed that the developed test program touches every line.
 After testing, the outputs from the register file and RAM are compared to what the actual expected values are.
 For this project and test, the values all matched.
-To determine whether or not the program passed, for every error a \$display will show what the specific error was.
-
-Note that for running this project, the entirety of our RAM is compressed to a single 65536*16 bit wire, which increases the execution time substantially.
-If the program looks like it freezes, just wait and it will eventually finish.
 
 
 \subsection{Issues}
